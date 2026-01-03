@@ -1,0 +1,43 @@
+name: Build Docs
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Build guide into temporary file
+        run: |
+          mkdir -p /tmp/sekiro-output
+          node build-guide.js sections.json /tmp/sekiro-output/index.html
+
+      - name: Commit generated docs branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin docs
+          cp /tmp/sekiro-output/index.html docs/index.html
+          git add docs/index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore: regenerate docs site"
+          git push origin docs
