@@ -19,6 +19,62 @@ const sections = JSON.parse(raw);
 
 const gameItemsDir = path.join(__dirname, "game-items");
 
+const slugify = (value) => {
+  const base = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return base.length > 0 ? base : "section";
+};
+
+const canonicalUrl =
+  process.env.GUIDE_CANONICAL_URL ??
+  "https://mjmarrazzo.github.io/sekiro-100-percent-guide/";
+
+const seoTitle = "Sekiro 100% Guide Checklist";
+const sectionNames = sections
+  .map((section) => section.name)
+  .filter((name) => typeof name === "string" && name.trim().length > 0);
+const totalSections = sections.length;
+const totalBlocks = sections.reduce(
+  (sum, section) => sum + (Array.isArray(section.blocks) ? section.blocks.length : 0),
+  0
+);
+const seoDescription = sectionNames.length
+  ? `Sekiro 100% completion checklist covering ${sectionNames.slice(0, 3).join(
+      ", "
+    )} and every other milestone in ${totalSections} collapsible sections with ${totalBlocks} task blocks.`
+  : `Sekiro 100% completion checklist organized across ${totalSections} collapsible sections and ${totalBlocks} task blocks.`;
+const seoKeywords = [
+  "Sekiro 100%",
+  "Sekiro guide",
+  "Sekiro checklist",
+  "Sekiro walkthrough",
+  "Sekiro completion",
+  "playthrough checklist",
+  "Sekiro tips",
+].join(", ");
+
+const structuredDataSteps = sections.slice(0, 8).map((section, index) => ({
+  "@type": "HowToStep",
+  name: section.name ?? `Section ${index + 1}`,
+  position: index + 1,
+  url: `${canonicalUrl}#${slugify(section.name ?? "section")}-${index + 1}`,
+}));
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: seoTitle,
+  description: seoDescription,
+  url: canonicalUrl,
+  author: {
+    "@type": "Organization",
+    name: "Sekiro 100% Guide Checklist",
+  },
+  step: structuredDataSteps,
+};
+const structuredDataJson = JSON.stringify(structuredData);
+
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const escapeHtml = (value) =>
@@ -235,14 +291,6 @@ const renderBlocks = (blocks, sectionIndex) =>
     })
     .join("");
 
-const slugify = (value) => {
-  const base = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return base.length > 0 ? base : "section";
-};
-
 const htmlSections = sections
   .map((section, index) => {
     const name = section.name ?? "";
@@ -266,7 +314,22 @@ const html = `<!doctype html>
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sekiro 100% Guide Checklist</title>
+    <meta name="description" content="${escapeHtml(seoDescription)}">
+    <meta name="keywords" content="${escapeHtml(seoKeywords)}">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="${escapeHtml(canonicalUrl)}">
+    <meta property="og:title" content="${escapeHtml(seoTitle)}">
+    <meta property="og:description" content="${escapeHtml(seoDescription)}">
+    <meta property="og:url" content="${escapeHtml(canonicalUrl)}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="${escapeHtml(seoTitle)}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${escapeHtml(seoTitle)}">
+    <meta name="twitter:description" content="${escapeHtml(seoDescription)}">
+    <title>${escapeHtml(seoTitle)}</title>
+    <script type="application/ld+json">
+${structuredDataJson}
+    </script>
     <style>
       :root {
         --paper: #f4efe4;
